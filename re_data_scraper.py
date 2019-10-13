@@ -1,26 +1,80 @@
 import pandas,math,re
 from bs4 import BeautifulSoup
-from selenium import webdriver
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.by import By
 import threading
+import requests
+import random
+from torrequest import TorRequest
+import time
+
+
+#some common user agents
+user_agent_list = [
+    'Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_6; en-en) AppleWebKit/533.19.4 (KHTML, like Gecko) Version/5.0.3 Safari/533.19.4',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_6_8) AppleWebKit/534.59.10 (KHTML, like Gecko) Version/5.1.9 Safari/534.59.10',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5) AppleWebKit/603.3.8 (KHTML, like Gecko) Version/10.1.2 Safari/603.3.8',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.75.14 (KHTML, like Gecko) Version/7.0.3 Safari/7046A194A',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10; rv:33.0) Gecko/20100101 Firefox/33.0	Firefox 33',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/601.7.8 (KHTML, like Gecko)',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/601.7.7 (KHTML, like Gecko) Version/9.1.2 Safari/601.7.7',
+    'Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_5_4; de-de) AppleWebKit/525.18 (KHTML, like Gecko) Version/3.1.2',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/11.1.2 Safari/605.1.15',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5) AppleWebKit/600.8.9 (KHTML, like Gecko)'
+]
+
+def get_details(re_dict):
+    search_url = ''.join(re_dict["Link"])
+    print(search_url)
+    try:
+        user_agent = random.choice(user_agent_list)
+        headers = {'User-Agent': user_agent}
+        page=tr.get(url=search_url,headers=headers)
+        c=page.content
+        soup=BeautifulSoup(c,"html.parser")
+        neighborhood=soup.find_all("div", {"class":"neighborhood-max-width-sm padding-bottom"})
+    except Exception as e:
+        user_agent = random.choice(user_agent_list)
+        headers = {'User-Agent': user_agent}
+        time.sleep(2)
+        tr.reset_identity()
+        response= tr.get('http://ipecho.net/plain')
+        print("New Ip Address: {}".format(response.text))
+        page=tr.get(url=search_url,headers=headers)
+        c=page.content
+        soup=BeautifulSoup(c,"html.parser")
+        neighborhood=soup.find_all("div", {"class":"neighborhood-max-width-sm padding-bottom"})
+    try:
+        neighbor = neighborhood[0].find('p').text
+        neighborhood_area = re.search('is located in (.*) neighborhood in the city of ', neighbor)
+    except Exception as e:
+        neighborhood_area = "NOT LISTED"
+    re_dict["neighborhood"] = neighborhood_area
+        
 
 def get_homes(soup, re_list, page_counter):
-    capa = DesiredCapabilities.CHROME
-    capa["pageLoadStrategy"] = "none"
-    dr = webdriver.Chrome(executable_path='./chromedriver', desired_capabilities=capa)
-    wait = WebDriverWait(dr, 60)
-
     print(page_counter)
     if page_counter!=1:
         search_url=''.join([base_url, '/realestateandhomes-search/Sacramento_CA/pg-',(str(page_counter))])
+        
+        try:
+            user_agent = random.choice(user_agent_list)
+            headers = {'User-Agent': user_agent}
+            page=tr.get(url=search_url,headers=headers)
+            c=page.content
+            soup=BeautifulSoup(c,"html.parser")
+            re_data=soup.find_all("li", {"class":"component_property-card js-component_property-card js-quick-view"})
+        except Exception as e:
+            time.sleep(2)
+            user_agent = random.choice(user_agent_list)
+            headers = {'User-Agent': user_agent}
+            tr.reset_identity()
+            response= tr.get('http://ipecho.net/plain')
+            print("New Ip Address: {}".format(response.text))
+            page=tr.get(url=search_url,headers=headers)
+            c=page.content
+            soup=BeautifulSoup(c,"html.parser")
+            re_data=soup.find_all("li", {"class":"component_property-card js-component_property-card js-quick-view"})
+        
         print(search_url)
-        dr.get(search_url)
-        wait.until(EC.presence_of_element_located((By.CLASS_NAME, 'srp-list')))
-        dr.execute_script("window.stop();")
-        soup=BeautifulSoup(dr.page_source,"html.parser")
     re_data=soup.find_all("li", {"class":"component_property-card js-component_property-card js-quick-view"})
     for item in re_data:
         re_dict={}
@@ -68,30 +122,48 @@ def get_homes(soup, re_list, page_counter):
         except:
             pass
         re_dict["Link"]=base_url + item['data-url']
+        get_details(re_dict)
         re_list.append(re_dict)
         community=""
     dr.close()
 
 
 
-dr = webdriver.Chrome(executable_path='./chromedriver')
+tr = TorRequest(proxy_port=9050, ctrl_port=9051, password='password')
+tr.reset_identity()
+response= tr.get('http://ipecho.net/plain')
+print("New Ip Address: {}".format(response.text))
+print("connected to tor")
 base_url='https://www.realtor.com'
 re_list=[]
 realtor_default_count=44
 page_counter=1
 search_url=''.join([base_url, '/realestateandhomes-search/Sacramento_CA'])
-dr.get(search_url)
-soup=BeautifulSoup(dr.page_source,"html.parser")
-print("made soup")
-total_homes=soup.find("span",{"class":"srp-footer-found-listing"}).text.strip().replace("\n","")
+try:
+    user_agent = random.choice(user_agent_list)
+    headers = {'User-Agent': user_agent}
+    page=tr.get(url=search_url,headers=headers)
+    c=page.content
+    soup=BeautifulSoup(c,"html.parser")
+    total_homes=soup.find("span",{"class":"srp-footer-found-listing"}).text.strip().replace("\n","")
+except Exception as e:
+    time.sleep(2)
+    user_agent = random.choice(user_agent_list)
+    headers = {'User-Agent': user_agent}
+    tr.reset_identity()
+    response= tr.get('http://ipecho.net/plain')
+    print("New Ip Address: {}".format(response.text))
+    page=tr.get(url=search_url,headers=headers)
+    c=page.content
+    soup=BeautifulSoup(c,"html.parser")
+    print(soup.prettify())
+    total_homes=soup.find("span",{"class":"srp-footer-found-listing"}).text.strip().replace("\n","")
 total_homes=int(re.sub('[^0-9]','', total_homes))
 total_pages=math.ceil(total_homes/realtor_default_count)
 print(total_pages)
-dr.close()
 while page_counter <= total_pages:
     get_homes(soup, re_list, page_counter)
     page_counter+=1
     
 re_df=pandas.DataFrame(re_list)
 re_df.to_csv("RealtorData.csv")
-
