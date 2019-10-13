@@ -1,29 +1,25 @@
 import pandas,math,re
 from bs4 import BeautifulSoup
 from selenium import webdriver
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
+import threading
 
+def get_homes(soup, re_list, page_counter):
+    capa = DesiredCapabilities.CHROME
+    capa["pageLoadStrategy"] = "none"
+    dr = webdriver.Chrome(executable_path='./chromedriver', desired_capabilities=capa)
+    wait = WebDriverWait(dr, 60)
 
-dr = webdriver.Chrome()
-base_url='https://www.realtor.com'
-re_list=[]
-realtor_default_count=44
-page_counter=1
-search_url=''.join([base_url, '/realestateandhomes-search/Sacramento_CA'])
-dr.get(search_url)
-soup=BeautifulSoup(dr.page_source,"html.parser")
-print("made soup")
-total_homes=soup.find("span",{"class":"srp-footer-found-listing"}).text.strip().replace("\n","")
-total_homes=int(re.sub('[^0-9]','', total_homes))
-total_pages=math.ceil(total_homes/realtor_default_count)
-print(total_pages)
-dr.close()
-while page_counter <= total_pages:
-    dr = webdriver.Chrome()
     print(page_counter)
     if page_counter!=1:
         search_url=''.join([base_url, '/realestateandhomes-search/Sacramento_CA/pg-',(str(page_counter))])
         print(search_url)
         dr.get(search_url)
+        wait.until(EC.presence_of_element_located((By.CLASS_NAME, 'srp-list')))
+        dr.execute_script("window.stop();")
         soup=BeautifulSoup(dr.page_source,"html.parser")
     re_data=soup.find_all("li", {"class":"component_property-card js-component_property-card js-quick-view"})
     for item in re_data:
@@ -74,8 +70,28 @@ while page_counter <= total_pages:
         re_dict["Link"]=base_url + item['data-url']
         re_list.append(re_dict)
         community=""
-    page_counter+=1
     dr.close()
+
+
+
+dr = webdriver.Chrome(executable_path='./chromedriver')
+base_url='https://www.realtor.com'
+re_list=[]
+realtor_default_count=44
+page_counter=1
+search_url=''.join([base_url, '/realestateandhomes-search/Sacramento_CA'])
+dr.get(search_url)
+soup=BeautifulSoup(dr.page_source,"html.parser")
+print("made soup")
+total_homes=soup.find("span",{"class":"srp-footer-found-listing"}).text.strip().replace("\n","")
+total_homes=int(re.sub('[^0-9]','', total_homes))
+total_pages=math.ceil(total_homes/realtor_default_count)
+print(total_pages)
+dr.close()
+while page_counter <= total_pages:
+    get_homes(soup, re_list, page_counter)
+    page_counter+=1
+    
 re_df=pandas.DataFrame(re_list)
 re_df.to_csv("RealtorData.csv")
 
