@@ -1,40 +1,30 @@
-import requests,pandas,math,re
+import pandas,math,re
 from bs4 import BeautifulSoup
 from selenium import webdriver
 
+
 dr = webdriver.Chrome()
-
-
-
-session=requests.Session()
-session.headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.40 Safari/537.36'}
 base_url='https://www.realtor.com'
 re_list=[]
 realtor_default_count=44
 page_counter=1
 search_url=''.join([base_url, '/realestateandhomes-search/Sacramento_CA'])
-
 dr.get(search_url)
-
-page=session.get(search_url, verify=False)
-c=page.content
 soup=BeautifulSoup(dr.page_source,"html.parser")
 print("made soup")
-try:
-    total_homes=soup.find("span",{"class":"srp-footer-found-listing"}).text.strip().replace("\n","")
-except Exception as e:
-    print(soup)
+total_homes=soup.find("span",{"class":"srp-footer-found-listing"}).text.strip().replace("\n","")
 total_homes=int(re.sub('[^0-9]','', total_homes))
 total_pages=math.ceil(total_homes/realtor_default_count)
 print(total_pages)
+dr.close()
 while page_counter <= total_pages:
+    dr = webdriver.Chrome()
     print(page_counter)
     if page_counter!=1:
         search_url=''.join([base_url, '/realestateandhomes-search/Sacramento_CA/pg-',(str(page_counter))])
         print(search_url)
-        page=session.get(search_url)
-        c=page.content
-        soup=BeautifulSoup(c,"html.parser")
+        dr.get(search_url)
+        soup=BeautifulSoup(dr.page_source,"html.parser")
     re_data=soup.find_all("li", {"class":"component_property-card js-component_property-card js-quick-view"})
     for item in re_data:
         re_dict={}
@@ -85,7 +75,7 @@ while page_counter <= total_pages:
         re_list.append(re_dict)
         community=""
     page_counter+=1
-
+    dr.close()
 re_df=pandas.DataFrame(re_list)
 re_df.to_csv("RealtorData.csv")
 
