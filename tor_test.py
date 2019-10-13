@@ -17,21 +17,19 @@ def connectTor():
 
 
 def renew_tor():
-    controller.authenticate('password')
+    controller.authenticate('my_password')
     controller.signal(Signal.NEWNYM)
 
 
 def show_my_ip():
-    url = "http://www.showmyip.gr/"
+    url = "https://httpbin.org/ip"
     r = requests.Session()
     page = r.get(url)
-    soup = BeautifulSoup(page.content, "lxml")
-    ip_address = soup.find("span",{"class":"ip_address"}).text.strip()
-    print(ip_address)
+    print(page.content)
 
 
 for i in range(10):
     renew_tor()
     connectTor()
-    showmyip()
+    show_my_ip()
     time.sleep(10)

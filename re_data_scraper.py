@@ -3,8 +3,27 @@ from bs4 import BeautifulSoup
 import threading
 import requests
 import random
-from torrequest import TorRequest
 import time
+import socket
+import socks
+from stem import Signal
+from stem.control import Controller
+
+controller = Controller.from_port(port=9051)
+
+def connectTor():
+    socks.setdefaultproxy(socks.PROXY_TYPE_SOCKS5 , "127.0.0.1", 9050, True)
+    socket.socket = socks.socksocket
+
+def renew_tor():
+    controller.authenticate('my_password')
+    controller.signal(Signal.NEWNYM)
+
+def show_my_ip():
+    url = "https://httpbin.org/ip"
+    r = requests.Session()
+    page = r.get(url)
+    print(page.content)
 
 
 #some common user agents
@@ -27,16 +46,23 @@ def get_details(re_dict):
     try:
         user_agent = random.choice(user_agent_list)
         headers = {'User-Agent': user_agent}
-        page=tr.get(url=search_url,headers=headers)
+        r = requests.Session()
+        page=r.get(url=search_url,headers=headers)
+
+        #page=tr.get(url=search_url,headers=headers)
+
         c=page.content
         soup=BeautifulSoup(c,"html.parser")
         neighborhood=soup.find_all("div", {"class":"neighborhood-max-width-sm padding-bottom"})
     except Exception as e:
+        time.sleep(2)
         user_agent = random.choice(user_agent_list)
         headers = {'User-Agent': user_agent}
-        time.sleep(2)
-        tr.reset_identity()
-        page=tr.get(url=search_url,headers=headers)
+        renew_tor()
+        connectTor()
+        show_my_ip()
+        r = requests.Session()
+        page=r.get(url=search_url,headers=headers)
         c=page.content
         soup=BeautifulSoup(c,"html.parser")
         neighborhood=soup.find_all("div", {"class":"neighborhood-max-width-sm padding-bottom"})
@@ -56,16 +82,20 @@ def get_homes(soup, re_list, page_counter):
         try:
             user_agent = random.choice(user_agent_list)
             headers = {'User-Agent': user_agent}
-            page=tr.get(url=search_url,headers=headers)
+            r = requests.Session()
+            page=r.get(url=search_url,headers=headers)
             c=page.content
             soup=BeautifulSoup(c,"html.parser")
             re_data=soup.find_all("li", {"class":"component_property-card js-component_property-card js-quick-view"})
         except Exception as e:
             time.sleep(2)
+            renew_tor()
+            connectTor()
+            show_my_ip()
             user_agent = random.choice(user_agent_list)
             headers = {'User-Agent': user_agent}
-            tr.reset_identity()
-            page=tr.get(url=search_url,headers=headers)
+            r = requests.Session()
+            page=r.get(url=search_url,headers=headers)
             c=page.content
             soup=BeautifulSoup(c,"html.parser")
             re_data=soup.find_all("li", {"class":"component_property-card js-component_property-card js-quick-view"})
@@ -124,8 +154,9 @@ def get_homes(soup, re_list, page_counter):
 
 
 
-tr = TorRequest(proxy_port=9050, ctrl_port=9051, password='password')
-tr.reset_identity()
+renew_tor()
+connectTor()
+show_my_ip()
 print("connected to tor")
 base_url='https://www.realtor.com'
 re_list=[]
@@ -135,19 +166,29 @@ search_url=''.join([base_url, '/realestateandhomes-search/Sacramento_CA'])
 try:
     user_agent = random.choice(user_agent_list)
     headers = {'User-Agent': user_agent}
-    page=tr.get(url=search_url,headers=headers)
+    r = requests.Session()
+    page=r.get(url=search_url,headers=headers)
+
+    #page=tr.get(url=search_url,headers=headers)
+
     c=page.content
     soup=BeautifulSoup(c,"html.parser")
     total_homes=soup.find("span",{"class":"srp-footer-found-listing"}).text.strip().replace("\n","")
 except Exception as e:
     time.sleep(2)
+    renew_tor()
+    connectTor()
+    show_my_ip()
     user_agent = random.choice(user_agent_list)
     headers = {'User-Agent': user_agent}
-    tr.reset_identity()
-    page=tr.get(url=search_url,headers=headers)
+    r = requests.Session()
+    page=r.get(url=search_url,headers=headers)
+    
+    #page=tr.get(url=search_url,headers=headers)
+    
     c=page.content
     soup=BeautifulSoup(c,"html.parser")
-    print(soup.prettify())
+    print(soup)
     total_homes=soup.find("span",{"class":"srp-footer-found-listing"}).text.strip().replace("\n","")
 total_homes=int(re.sub('[^0-9]','', total_homes))
 total_pages=math.ceil(total_homes/realtor_default_count)
