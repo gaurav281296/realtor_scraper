@@ -36,15 +36,13 @@ def get_details(re_dict):
         headers = {'User-Agent': user_agent}
         time.sleep(2)
         tr.reset_identity()
-        response= tr.get('http://ipecho.net/plain')
-        print("New Ip Address: {}".format(response.text))
         page=tr.get(url=search_url,headers=headers)
         c=page.content
         soup=BeautifulSoup(c,"html.parser")
         neighborhood=soup.find_all("div", {"class":"neighborhood-max-width-sm padding-bottom"})
     try:
         neighbor = neighborhood[0].find('p').text
-        neighborhood_area = re.search('is located in (.*) neighborhood in the city of ', neighbor)
+        neighborhood_area = re.search('is located in (.*) neighborhood in the city of ', neighbor).group(1)
     except Exception as e:
         neighborhood_area = "NOT LISTED"
     re_dict["neighborhood"] = neighborhood_area
@@ -67,8 +65,6 @@ def get_homes(soup, re_list, page_counter):
             user_agent = random.choice(user_agent_list)
             headers = {'User-Agent': user_agent}
             tr.reset_identity()
-            response= tr.get('http://ipecho.net/plain')
-            print("New Ip Address: {}".format(response.text))
             page=tr.get(url=search_url,headers=headers)
             c=page.content
             soup=BeautifulSoup(c,"html.parser")
@@ -125,14 +121,11 @@ def get_homes(soup, re_list, page_counter):
         get_details(re_dict)
         re_list.append(re_dict)
         community=""
-    dr.close()
 
 
 
 tr = TorRequest(proxy_port=9050, ctrl_port=9051, password='password')
 tr.reset_identity()
-response= tr.get('http://ipecho.net/plain')
-print("New Ip Address: {}".format(response.text))
 print("connected to tor")
 base_url='https://www.realtor.com'
 re_list=[]
@@ -151,8 +144,6 @@ except Exception as e:
     user_agent = random.choice(user_agent_list)
     headers = {'User-Agent': user_agent}
     tr.reset_identity()
-    response= tr.get('http://ipecho.net/plain')
-    print("New Ip Address: {}".format(response.text))
     page=tr.get(url=search_url,headers=headers)
     c=page.content
     soup=BeautifulSoup(c,"html.parser")
