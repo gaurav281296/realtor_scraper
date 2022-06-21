@@ -11,7 +11,7 @@ importlib-metadata==0.23
 jsonschema==3.1.1
 lxml==4.4.1
 more-itertools==7.2.0
-numpy==1.17.2
+numpy==1.22.0
 pandas==0.25.1
 parse==1.12.1
 pyee==6.0.0
