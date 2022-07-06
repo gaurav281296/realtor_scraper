@@ -9,7 +9,7 @@ fake-useragent==0.1.11
 idna==2.8
 importlib-metadata==0.23
 jsonschema==3.1.1
-lxml==4.4.1
+lxml==4.9.1
 more-itertools==7.2.0
 numpy==1.17.2
 pandas==0.25.1
